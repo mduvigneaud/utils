@@ -1,0 +1,26 @@
+#!/bin/bash
+
+svn="/usr/bin/svn"
+less="/usr/bin/less -x 4"
+
+case "$1" in
+	'log')
+		$svn "$@" |perl ~/bin/svnlog.pl |$less -RFX
+	;;
+	'diff')
+		$svn "$@" |perl ~/bin/colordiff.pl |$less -RFX
+	;;
+	'describe')
+		$svn diff -c "${2}" |perl ~/bin/colordiff.pl |$less -RFX
+	;;
+	'files')
+		$svn diff -c "${2}" --summarize |awk '{print $2}' |$less -RFX
+	;;
+	'st')
+		$svn "$@" |perl ~/bin/colorstatus.pl |$less -RFX
+	;;
+	*)
+		$svn "$@"
+	;;
+esac
+

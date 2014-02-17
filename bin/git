@@ -1,0 +1,76 @@
+#!/bin/bash
+
+GIT="/usr/bin/git"
+
+
+# Figure out what vim syntax to use for a file name.
+function get_vim_syntax {
+	syn="off"
+	if [[ "$1" == *.php ]]; then
+		syn="php"
+	elif [[ "$1" == *.js ]]; then
+		syn="javascript"
+	elif [[ "$1" == *.css ]]; then
+		syn="css"
+	elif [[ "$1" == *.sh ]]; then
+		syn="sh"
+	fi
+	
+	echo -n "+set syntax=$syn"
+}
+
+
+# List files in 1 or more commits.
+function list_commit_files {
+	echo "$@" \
+		| xargs $GIT diff-tree --no-commit-id --name-only -r \
+		| sort -u
+}
+
+
+# See how we were called.
+case "$1" in
+	before|b4)
+		shift
+		list_commit_files "$1" \
+			| xargs $GIT checkout "$1^" --
+	;;
+	blame|annotate)
+		shift
+		$GIT blame "$1" \
+			| vim -R - "$(get_vim_syntax $1)"
+	;;
+	ci)
+		shift
+		$GIT commit "$@"
+	;;
+	co)
+		shift
+		$GIT checkout "$@"
+	;;
+	files)
+		shift
+		if [ "$1" == "" ]; then
+			echo "No commits to show"
+			exit 1
+		fi
+		list_commit_files "$@"
+	;;
+	mod|modified|ua)
+		shift
+		$GIT status \
+			| perl -ne '$s++ if /^# Changed but not updated:/ || $s; next unless $s>4; s/^#\t(?:modified:\s+)// or next; print'
+	;;
+	st)
+		shift
+		$GIT status "$@"
+	;;
+	untracked|ut)
+		shift
+		$GIT status -uall \
+			| perl -ne '$s++ if /^# Untracked files:/ || $s; next unless $s>3; s/^#\t//; print'
+	;;
+	*)
+		$GIT "$@"
+	;;
+esac
